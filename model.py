@@ -65,13 +65,15 @@ class CausalSelfAttention(nn.Module):
             # attention mask changes
             # attention_mask: (B, T) → expand to (B, 1, T)
             # causal_mask: (1, 1, T, T)
-            # final_mask: (B, 1, T, T)
+            # final_mask: (B, nh, T, T)
             causal_mask = torch.tril(torch.ones(T, T, device=x.device, dtype=torch.bool)).unsqueeze(0).unsqueeze(0)
             if attention_mask is not None:
                 attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)
                 combined_mask = causal_mask & attention_mask
+                combined_mask = combined_mask.expand(B, self.n_head, T, T)  # (B, nh, T, T)
             else:
-                combined_mask = causal_mask
+                combined_mask = causal_mask.expand(B, self.n_head, T, T)
+
             y = torch.nn.functional.scaled_dot_product_attention(q, k, v,
                                                                  attn_mask=combined_mask,
                                                                  dropout_p=self.dropout if self.training else 0,
