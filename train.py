@@ -3,6 +3,7 @@ from torch.utils.data import DataLoader, Dataset
 import torch.nn.functional as F
 import tiktoken
 from model import GPT, GPTConfig
+import yaml
 
 import os
 
@@ -47,24 +48,23 @@ def custom_collate_fn(batch, pad_token_id, block_size):
     return torch.stack(padded_x_batch), torch.stack(padded_y_batch), torch.stack(attention_mask_batch)
 
 # -------- Training --------
+def train(config_path="config.yaml"):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def train(
-    data_path="input.txt",
-    epochs=501,
-    batch_size=12,
-    block_size=12,
-    lr=3e-4,
-    weight_decay=0.1,
-    betas=(0.9, 0.95),
-    device="cuda" if torch.cuda.is_available() else "cpu",
-    save_dir="checkpoints",
-):
-    # Get tokenizer and define pad token
-    tokenizer = tiktoken.get_encoding("gpt2")
+    # 0. Load config
+    with open(config_path, "r") as f:
+        cfg_dict = yaml.safe_load(f)
+
+    model_cfg = cfg_dict["model"]
+    train_cfg = cfg_dict["train"]
+
+    config = GPTConfig(**model_cfg)
+
+    tokenizer = tiktoken.get_encoding(config.tokenizer)
     pad_token_id = tokenizer.max_token_value + 1
 
     # 1. Load text data
-    with open(data_path, "r", encoding="utf-8") as f:
+    with open(train_cfg["data_path"], "r", encoding="utf-8") as f:
         text = f.readlines()
     print("### TRAINING TEXT ###")
     print(text)
@@ -77,17 +77,19 @@ def train(
         if line:
             line_tokens = [tokenizer.eot_token] + tokenizer.encode(line) + [tokenizer.eot_token]
             tokens.extend(line_tokens)
-    
-    # avoid empty dataloader
-    if len(tokens) < block_size + 1:
-        tokens.extend([pad_token_id] * (block_size + 1 - len(tokens)))
-    
-    dataset = TextDataset(tokens, block_size)
-    # Use a custom collate_fn to handle padding and create attention mask for each batch
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, collate_fn=lambda b: custom_collate_fn(b, pad_token_id, batch_size))
 
-    # All batches (after padding and masking by collate_fn)
-    print("\n=== DataLoader Batch Example ===")
+    if len(tokens) < config.block_size + 1:
+        tokens.extend([pad_token_id] * (config.block_size + 1 - len(tokens)))
+
+    dataset = TextDataset(tokens, config.block_size)
+    dataloader = DataLoader(
+        dataset,
+        batch_size=train_cfg["batch_size"],
+        shuffle=False,
+        collate_fn=lambda b: custom_collate_fn(b, pad_token_id, config.block_size)
+    )
+
+    print("\n=== DataLoader Batches ===")
     for i, (x_batch, y_batch, attention_mask_batch) in enumerate(dataloader):
         print(f"X batch shape: {x_batch.shape}")
         print(f"Y batch shape: {y_batch.shape}")
@@ -96,9 +98,8 @@ def train(
             x_tokens = x_batch[batch_idx].tolist()
             y_tokens = y_batch[batch_idx].tolist()
             mask = attention_mask_batch[batch_idx].tolist()
-            # Filter out pad_token_id for display purposes
-            x_text = tokenizer.decode([token for token in x_tokens if token != pad_token_id])
-            y_text = tokenizer.decode([token for token in y_tokens if token != pad_token_id])
+            x_text = tokenizer.decode([t for t in x_tokens if t != pad_token_id])
+            y_text = tokenizer.decode([t for t in y_tokens if t != pad_token_id])
             print(f"  Batch {batch_idx}:")
             print(f"    X (decoded, no pads): '{x_text}'")
             print(f"    Y (decoded, no pads): '{y_text}'")
@@ -107,51 +108,51 @@ def train(
             print(f"    Attention Mask: {mask}")
     print("==============================================\n")
 
-
-    # 3. Model config and instantiate model
-    config = GPTConfig(
-        block_size=block_size,
-        vocab_size=50304,
-        n_layer=1,
-        n_head=1,
-        n_embd=768,
-        dropout=0.1,
-        bias=False
-    )
+    # 3. Model
     model = GPT(config).to(device)
-    config.pad_token_id = pad_token_id
 
     # 4. Optimizer
-    optimizer = model.configure_optimizers(weight_decay, lr, betas, device_type=device)
+    optimizer = model.configure_optimizers(
+        train_cfg["weight_decay"],
+        float(train_cfg["lr"]),
+        tuple(train_cfg["betas"]),
+        device_type=device
+    )
 
     # 5. Training loop
     model.train()
-    for epoch in range(epochs):
-        print(f"Epoch {epoch + 1}/{epochs}")
+    for epoch in range(train_cfg["epochs"]):
+        print(f"Epoch {epoch + 1}/{train_cfg['epochs']}")
         total_loss = 0
-        for i, (x, y, attention_mask) in enumerate(dataloader): # Unpack attention_mask
+        for x, y, attention_mask in dataloader:
             x, y, attention_mask = x.to(device), y.to(device), attention_mask.to(device)
 
             optimizer.zero_grad()
-            logits = model(x, attention_mask=attention_mask) 
+            logits = model(x, attention_mask=attention_mask)
+
+            y_masked = y.clone()
+            if train_cfg["mask_first_three"]:
+                mask = torch.ones_like(y, dtype=torch.bool)
+                mask[:, :3] = False
+                y_masked = y.clone()
+                y_masked[~mask] = pad_token_id
+
             loss = F.cross_entropy(
                 logits.view(-1, logits.size(-1)),
-                y.view(-1),
+                y_masked.view(-1),
                 ignore_index=pad_token_id
             )
-            
+
             loss.backward()
             optimizer.step()
-
             total_loss += loss.item()
 
         avg_loss = total_loss / len(dataloader)
         print(f"Epoch {epoch + 1} average loss: {avg_loss:.4f}")
 
-        # Save checkpoint
         if (epoch + 1) % 100 == 0:
-            os.makedirs(save_dir, exist_ok=True)
-            torch.save(model.state_dict(), os.path.join(save_dir, f"model_epoch{epoch + 1}.pt"))
+            os.makedirs(train_cfg["save_dir"], exist_ok=True)
+            torch.save(model.state_dict(), os.path.join(train_cfg["save_dir"], f"model_epoch{epoch + 1}.pt"))
             print(f"Saved checkpoint for epoch {epoch + 1}")
 
 if __name__ == "__main__":

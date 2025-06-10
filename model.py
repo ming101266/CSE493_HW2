@@ -14,6 +14,7 @@ from dataclasses import dataclass
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
+import tiktoken
 
 
 class LayerNorm(nn.Module):
@@ -63,7 +64,7 @@ class CausalSelfAttention(nn.Module):
         if self.flash:
             # efficient attention using Flash Attention CUDA kernels
             # attention mask changes
-            # attention_mask: (B, T) → expand to (B, 1, T)
+            # attention_mask: (B, T) → expand to (B, 1, 1, T)
             # causal_mask: (1, 1, T, T)
             # final_mask: (B, nh, T, T)
             causal_mask = torch.tril(torch.ones(T, T, device=x.device, dtype=torch.bool)).unsqueeze(0).unsqueeze(0)
@@ -134,7 +135,7 @@ class GPTConfig:
     dropout: float = 0.0
     bias: bool = False # True: bias in Linears and LayerNorms, like GPT-2. False: a bit better and faster
     # TODO: add a tokenizer option
-    tokenizer = True
+    tokenizer: tiktoken.Encoding = None
 
 class GPT(nn.Module):
 
@@ -143,7 +144,6 @@ class GPT(nn.Module):
         assert config.vocab_size is not None
         assert config.block_size is not None
         self.config = config
-
         self.transformer = nn.ModuleDict(dict(
             wte = nn.Embedding(config.vocab_size, config.n_embd),
             wpe = nn.Embedding(config.block_size, config.n_embd),

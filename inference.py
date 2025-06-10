@@ -1,6 +1,7 @@
 import torch
 import argparse
 from model import GPT, GPTConfig
+import yaml
 import tiktoken
 
 
@@ -32,23 +33,34 @@ def generate(model, idx, max_new_tokens, tokenizer, temperature=1.0, top_k=None)
     return tokenizer.decode(tokens)
 
 # -------- Inference --------
-def main():
+def main(config_path="config.yaml"):
     parser = argparse.ArgumentParser()
-    parser.add_argument("--checkpoint", type=str, default="checkpoints/model_epoch400.pt", help="Path to model .pt checkpoint")
+    parser.add_argument("--checkpoint", type=str, default="checkpoints/model_epoch300.pt", help="Path to model .pt checkpoint")
     parser.add_argument("--prompt", type=str, default="", help="Initial prompt string")
     parser.add_argument("--tokens", type=int, default=10, help="Number of tokens to generate")
     args = parser.parse_args()
 
     # Load model config and checkpoint
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    config = GPTConfig(block_size=12)
-    model = GPT(config)
+    
+    # 0. Get model config,
+    #    get tokenizer and define pad token
+    with open(config_path, "r") as f:
+        cfg_dict = yaml.safe_load(f)
+
+    model_cfg = cfg_dict["model"]
+    train_cfg = cfg_dict["train"]
+
+    config = GPTConfig(**model_cfg)
+    model = GPT(config).to(device)
+
+    tokenizer = tiktoken.get_encoding(config.tokenizer)
+
     checkpoint = torch.load(args.checkpoint, map_location=device)
     model.load_state_dict(checkpoint, strict=False)
     model.to(device)
 
     # Load tokenizer
-    tokenizer = tiktoken.get_encoding("gpt2")
     bos_token_id = tokenizer.eot_token
     input_ids = torch.tensor([[bos_token_id] + tokenizer.encode(args.prompt)], dtype=torch.long).to(device)
 
