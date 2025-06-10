@@ -34,14 +34,14 @@ def generate(model, idx, max_new_tokens, tokenizer, temperature=1.0, top_k=None)
 # -------- Inference --------
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--checkpoint", type=str, default="checkpoints/model_epoch200.pt", help="Path to model .pt checkpoint")
+    parser.add_argument("--checkpoint", type=str, default="checkpoints/model_epoch400.pt", help="Path to model .pt checkpoint")
     parser.add_argument("--prompt", type=str, default="", help="Initial prompt string")
     parser.add_argument("--tokens", type=int, default=10, help="Number of tokens to generate")
     args = parser.parse_args()
 
     # Load model config and checkpoint
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    config = GPTConfig(block_size=2)
+    config = GPTConfig(block_size=12)
     model = GPT(config)
     checkpoint = torch.load(args.checkpoint, map_location=device)
     model.load_state_dict(checkpoint, strict=False)

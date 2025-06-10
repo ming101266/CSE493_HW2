@@ -50,7 +50,7 @@ class CausalSelfAttention(nn.Module):
             self.register_buffer("bias", torch.tril(torch.ones(config.block_size, config.block_size))
                                         .view(1, 1, config.block_size, config.block_size))
 
-    def forward(self, x):
+    def forward(self, x, attention_mask=None):
         B, T, C = x.size() # batch size, sequence length, embedding dimensionality (n_embd)
 
         # calculate query, key, values for all heads in batch and move head forward to be the batch dim
@@ -62,11 +62,27 @@ class CausalSelfAttention(nn.Module):
         # causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
         if self.flash:
             # efficient attention using Flash Attention CUDA kernels
-            y = torch.nn.functional.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p=self.dropout if self.training else 0, is_causal=True)
+            # attention mask changes
+            # attention_mask: (B, T) → expand to (B, 1, T)
+            # causal_mask: (1, 1, T, T)
+            # final_mask: (B, 1, T, T)
+            causal_mask = torch.tril(torch.ones(T, T, device=x.device, dtype=torch.bool)).unsqueeze(0).unsqueeze(0)
+            if attention_mask is not None:
+                attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)
+                combined_mask = causal_mask & attention_mask
+            else:
+                combined_mask = causal_mask
+            y = torch.nn.functional.scaled_dot_product_attention(q, k, v,
+                                                                 attn_mask=combined_mask,
+                                                                 dropout_p=self.dropout if self.training else 0,
+                                                                 is_causal=False)
         else:
             # manual implementation of attention
             att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
             att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf'))
+            # attention mask changes
+            if attention_mask is not None:
+                att = att.masked_fill(attention_mask==0, float('-inf'))
             att = F.softmax(att, dim=-1)
             att = self.attn_dropout(att)
             y = att @ v # (B, nh, T, T) x (B, nh, T, hs) -> (B, nh, T, hs)
@@ -101,8 +117,8 @@ class Block(nn.Module):
         self.ln_2 = LayerNorm(config.n_embd, bias=config.bias)
         self.mlp = MLP(config)
 
-    def forward(self, x):
-        x = x + self.attn(self.ln_1(x))
+    def forward(self, x, attention_mask=None):
+        x = x + self.attn(self.ln_1(x), attention_mask=attention_mask)
         x = x + self.mlp(self.ln_2(x))
         return x
 
@@ -170,7 +186,7 @@ class GPT(nn.Module):
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
-    def forward(self, idx):
+    def forward(self, idx, attention_mask=None):
         device = idx.device
         b, t = idx.size()
         assert t <= self.config.block_size, f"Cannot forward sequence of length {t}, block size is only {self.config.block_size}"
@@ -181,7 +197,11 @@ class GPT(nn.Module):
         pos_emb = self.transformer.wpe(pos) # position embeddings of shape (t, n_embd)
         x = self.transformer.drop(tok_emb + pos_emb)
         for block in self.transformer.h:
-            x = block(x)
+            # attention mask changes
+            if attention_mask is not None:
+                x = block(x, attention_mask=attention_mask)
+            else:
+                x = block(x)
         x = self.transformer.ln_f(x)
 
         logits = self.lm_head(x)
