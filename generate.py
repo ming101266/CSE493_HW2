@@ -1,5 +1,6 @@
 import random
 import os
+import yaml
 
 def modinv(b, p):
     # Modular inverse using Fermat's little theorem (p prime)
@@ -7,13 +8,11 @@ def modinv(b, p):
         return None
     return pow(b, p-2, p)
 
-def generate_samples(p, n_samples):
-    ops = ['+', '-']
+def generate_samples(p, n_samples, op):
     samples = []
     while len(samples) < n_samples:
         a = random.randint(0, p)
         b = random.randint(0, p)
-        op = random.choice(ops)
         if op == '+':
             c = (a + b) % p
             expr = f"{a}+{b}={c}"
@@ -49,15 +48,18 @@ def split_and_save(samples, outdir):
                 f.write(line + "\n")
         print(f"Saved {len(data)} samples to {path}")
 
-def main():
-    random.seed(42)
-    samples_per_p = 20000
+def main(config_path="part2config.yaml"):
+    # 0. Load config
+    with open(config_path, "r") as f:
+        cfg_dict = yaml.safe_load(f)
+    generate_config = cfg_dict["generate"]
+    seed = generate_config["seed"]
+    random.seed(seed)
+    samples_per_p = generate_config["num_samples"]
 
-    for p in [97, 113]:
-        print(f"\nGenerating samples for p={p}...")
-        samples = generate_samples(p, samples_per_p)
-        outdir = f"data_p{p}"
-        split_and_save(samples, outdir)
+    samples = generate_samples(generate_config["prime"], samples_per_p, op = generate_config["op"])
+    outdir = f"data"
+    split_and_save(samples, outdir)
 
 if __name__ == "__main__":
     main()

@@ -8,6 +8,7 @@ from tqdm import tqdm # Import tqdm for progress bars
 from transformers import get_cosine_schedule_with_warmup # For learning rate scheduling
 import random
 import numpy as np
+import matplotlib.pyplot as plt
 
 from model import GPT, GPTConfig
 from utils import CharTokenizer, TextDataset, custom_collate_fn
@@ -131,7 +132,10 @@ def train():
     model.train()
     global_step = 0
     start_time = datetime.now()
-    
+    train_loss = []
+    train_acc = []
+    test_loss = []
+    test_acc = []
     for epoch in range(train_cfg["epochs"]):
         print(f"Epoch {epoch + 1}/{train_cfg['epochs']}")
         total_loss = 0
@@ -188,6 +192,8 @@ def train():
 
         avg_loss = total_loss / len(train_dataloader)
         elapsed_time = (datetime.now() - start_time).total_seconds() / 60
+        train_loss.append(avg_loss)
+        train_acc.append(total_correct_predictions/len(train_dataloader))
         print(f"Epoch {epoch + 1} average loss: {avg_loss:.4f} (Elapsed: {elapsed_time:.2f} min)")
 
         if (epoch + 1) % train_cfg["save_interval"] == 0:
@@ -232,6 +238,8 @@ def train():
                 
             avg_val_loss = val_total_loss / len(val_dataloader)
             val_accuracy = val_total_correct_predictions / val_total_masked_tokens if val_total_masked_tokens > 0 else 0.0
+            test_loss.append(avg_val_loss)
+            test_acc.append(val_accuracy)
             print(f"Validation Loss after Epoch {epoch + 1}: {avg_val_loss:.4f}, Accuracy: {val_accuracy:.4f}")
             model.train()
 
@@ -241,6 +249,29 @@ def train():
     final_checkpoint_path = os.path.join(train_cfg["save_dir"], "model_final.pt")
     torch.save(model.state_dict(), final_checkpoint_path)
     print(f"Final model saved to {final_checkpoint_path}")
+    # Plot Loss
+    plt.figure(figsize=(10, 5))
+    plt.plot(train_loss, label="Train Loss")
+    plt.plot(test_loss, label="Testing Loss")
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.title("Loss Over Epochs")
+    plt.legend()
+    plt.grid(True)
+    plt.savefig(os.path.join(train_cfg["save_dir"], "loss_plot.png"))
+    plt.show()
+
+    # Plot Accuracy
+    plt.figure(figsize=(10, 5))
+    plt.plot(train_acc, label="Train Accuracy")
+    plt.plot(test_acc, label="Testing Accuracy")
+    plt.xlabel("Epoch")
+    plt.ylabel("Accuracy")
+    plt.title("Accuracy Over Epochs")
+    plt.legend()
+    plt.grid(True)
+    plt.savefig(os.path.join(train_cfg["save_dir"], "acc_plot.png"))
+    plt.show()
 
 
 if __name__ == "__main__":

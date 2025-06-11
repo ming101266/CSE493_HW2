@@ -15,7 +15,7 @@ def evaluate():
     parser = argparse.ArgumentParser(description="Evaluate a trained GPT model on the test set.")
     parser.add_argument("--config", type=str, default="part2config.yaml",
                         help="Path to the configuration file (config.yaml).")
-    parser.add_argument("--checkpoint", type=str, default="checkpoints/model_final.pt",
+    parser.add_argument("--checkpoint", type=str, default="part2_checkpoints/model_final.pt",
                         help="Path to the trained model checkpoint (.pt file).")
     args = parser.parse_args()
 
