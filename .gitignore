@@ -1,0 +1,11 @@
+*
+
+!*.png
+!*.py
+!*.yaml
+!*.md
+!*.sh
+!*.pdf
+!.gitignore
+
+!*/
