@@ -4,6 +4,8 @@ import torch.nn.functional as F
 import tiktoken
 from model import GPT, GPTConfig
 import yaml
+import random
+import numpy as np
 
 import os
 
@@ -59,6 +61,15 @@ def train(config_path="config.yaml"):
     train_cfg = cfg_dict["train"]
 
     config = GPTConfig(**model_cfg)
+    seed = train_cfg["seed"]
+
+    # Seeding
+    random.seed(seed)                  # Python RNG
+    np.random.seed(seed)               # NumPy RNG
+    torch.manual_seed(seed)            # CPU RNG
+    torch.cuda.manual_seed(seed)       # GPU RNG
+    torch.cuda.manual_seed_all(seed)   # All GPUs
+
 
     tokenizer = tiktoken.get_encoding(config.tokenizer)
     pad_token_id = tokenizer.max_token_value + 1
@@ -148,7 +159,7 @@ def train(config_path="config.yaml"):
             total_loss += loss.item()
 
         avg_loss = total_loss / len(dataloader)
-        print(f"Epoch {epoch + 1} average loss: {avg_loss:.4f}")
+        print(f"Epoch {epoch + 1} average loss: {avg_loss}")
 
         if (epoch + 1) % 100 == 0:
             os.makedirs(train_cfg["save_dir"], exist_ok=True)
