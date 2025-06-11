@@ -25,6 +25,10 @@ The results of these experiments are within each folder. Due to the size of each
 
 # Ablation
 
+For our ablation experiment. We decided to change the number of generated inputs. As can be seen with our earlier experiments, increasing the number of input is effective at getting validation accuracy high, in fact, even higher than training accuracy. However, we do notice that behaviors more similar to grokking appear at smaller datasets than 10k but disappears when model size is too small. Thus, we were curious about how does the size of our data affects grokking. 
+
+We have included 4 experiments with 10k, 5k, 2k, and 1k generated datapoints corresponding to folders ablation1, ablation2, ablation3, and ablation4. Due to limit in computation power, it was not possible to see all of them reach 0 or grokk. Thus, we decided to instead qualitivatively observe the graphs. 
+
 # Part 2: Algorithmic Tasks # 
 
 We generated a dataset of 10,000 expressions for modular arithmetic. To create each sample, we randomly selected two integers between 0 and p−1, then applied a chosen operator to compute the result modulo p. Specifically, we calculated c=(a op b)mod p, and formatted the sample as a string in the form a{op}b=c. This process was repeated until we had 10,000 samples. Afterward, we randomly shuffled the dataset and split it into 3,000 examples for training, 3,500 for validation, and 3,500 for testing.
@@ -623,7 +627,7 @@ generate:
   data_dir: "part2_checkpoints15/"
 
 
-# Experiment 4
+# Experiment 16
 model:
   block_size: 15
   vocab_size: 16
@@ -654,7 +658,7 @@ generate:
   prime: 113
   num_samples: 10000
 
-# Experiment 5
+# Experiment 17
 model:
   block_size: 15
   vocab_size: 16
@@ -690,7 +694,7 @@ Test Accuracy: 0.9451
 Total Correct Predictions: 2859
 Total Masked Tokens: 3025
 
-# Experiment 6
+# Experiment 18
 model:
   block_size: 15
   vocab_size: 16
@@ -727,7 +731,7 @@ Test Accuracy: 0.9697
 Total Correct Predictions: 2814
 Total Masked Tokens: 2902
 
-# Experiment 7
+# Experiment 19
 model:
   block_size: 15
   vocab_size: 16
@@ -765,7 +769,7 @@ Test Accuracy: 0.9601
 Total Correct Predictions: 2914
 Total Masked Tokens: 3035
 
-# Experiment 8
+# Experiment 20
 model:
   block_size: 15
   vocab_size: 16
@@ -802,7 +806,7 @@ Test Accuracy: 0.9325
 Total Correct Predictions: 2831
 Total Masked Tokens: 3036
 
-# Experiment 9
+# Experiment 21
 
 model:
   block_size: 15
@@ -834,7 +838,7 @@ generate:
   prime: 97
   num_samples: 10000
 
-# Experiment 10
+# Experiment 22
 model:
   block_size: 15
   vocab_size: 16
@@ -865,7 +869,7 @@ generate:
   prime: 97
   num_samples: 10000
 
-# Experiment 11
+# Experiment 23
 model:
   block_size: 15
   vocab_size: 16
@@ -896,7 +900,7 @@ generate:
   prime: 113
   num_samples: 10000
 
-# Experiment 12
+# Experiment 24
 model:
   block_size: 15
   vocab_size: 16
