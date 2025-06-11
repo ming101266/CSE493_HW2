@@ -6,6 +6,8 @@ import os
 from datetime import datetime
 from tqdm import tqdm # Import tqdm for progress bars
 from transformers import get_cosine_schedule_with_warmup # For learning rate scheduling
+import random
+import numpy as np
 
 from model import GPT, GPTConfig
 from utils import CharTokenizer, TextDataset, custom_collate_fn
@@ -53,6 +55,15 @@ def train():
 
     config = GPTConfig(**model_cfg)
     config.vocab_size = tokenizer.vocab_size
+    seed = train_cfg["seed"]
+
+    # Seeding
+    random.seed(seed)                  # Python RNG
+    np.random.seed(seed)               # NumPy RNG
+    torch.manual_seed(seed)            # CPU RNG
+    torch.cuda.manual_seed(seed)       # GPU RNG
+    torch.cuda.manual_seed_all(seed)   # All GPUs
+
 
     model = GPT(config).to(device)
     print(f"Number of parameters: {sum(p.numel() for p in model.parameters())/1e6:.2f}M")

@@ -10,13 +10,14 @@ model:
 
 train:
   batch_size: 200
-  save_dir: "checkpoints/"
+  save_dir: "part2_checkpoints/"
   lr: 1e-4
   weight_decay: 0.1
   betas: [0.9, 0.95]
   epochs: 1000
   save_interval: 100
   eval_interval: 50
+  seed: 42
 
 data: 
   data_dir: "data_p97"
