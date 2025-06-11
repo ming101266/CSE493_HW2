@@ -1,0 +1,5 @@
+torch
+tdqm
+transformers
+matplotlib
+tiktoken
