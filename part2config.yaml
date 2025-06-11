@@ -1,0 +1,22 @@
+model:
+  block_size: 15
+  vocab_size: 16
+  n_layer: 1
+  n_head: 4
+  n_embd: 128
+  dropout: 0.1
+  bias: false
+  tokenizer: "char-level"
+
+train:
+  batch_size: 200
+  save_dir: "checkpoints/"
+  lr: 1e-4
+  weight_decay: 0.1
+  betas: [0.9, 0.95]
+  epochs: 1000
+  save_interval: 100
+  eval_interval: 50
+
+data: 
+  data_dir: "data_p97"
