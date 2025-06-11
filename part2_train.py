@@ -134,7 +134,7 @@ def train():
     start_time = datetime.now()
     train_loss = []
     train_acc = []
-    test_loss = []
+    val_loss = []
     test_acc = []
     for epoch in range(train_cfg["epochs"]):
         print(f"Epoch {epoch + 1}/{train_cfg['epochs']}")
@@ -184,16 +184,47 @@ def train():
             # Update learning rate scheduler
             lr_scheduler.step()
 
-            total_loss += loss.item()
             global_step += 1
 
             # Update progress bar
             pbar.set_postfix(loss=loss.item(), lr=optimizer.param_groups[0]['lr'])
 
+        with torch.no_grad():
+            # Use tqdm for a progress bar
+            pbar = tqdm(train_dataloader, desc="Evaluating on training")
+            for x, y, attention_mask, loss_mask in pbar:
+                x, y, attention_mask, loss_mask = x.to(device), y.to(device), attention_mask.to(device), loss_mask.to(device)
+                
+                with torch.cuda.amp.autocast(enabled=train_cfg.get("use_amp", False)):
+                    logits = model(x, attention_mask=attention_mask)
+
+                    logits_flat = logits.view(-1, logits.size(-1))
+                    y_flat = y.view(-1)
+                    loss_mask_flat = loss_mask.view(-1)
+
+                    masked_logits = logits_flat[loss_mask_flat]
+                    masked_y = y_flat[loss_mask_flat]
+
+                    if masked_y.numel() > 0:
+                        test_loss = F.cross_entropy(
+                            masked_logits,
+                            masked_y,
+                            ignore_index=pad_token_id
+                        )
+                        total_loss += test_loss.item()
+
+                        # Calculate accuracy
+                        predictions = torch.argmax(masked_logits, dim=-1)
+                        total_correct_predictions += (predictions == masked_y).sum().item()
+                        total_masked_tokens += masked_y.numel()
+
+                pbar.set_postfix(loss=test_loss.item())
+
         avg_loss = total_loss / len(train_dataloader)
-        elapsed_time = (datetime.now() - start_time).total_seconds() / 60
+        train_accuracy = total_correct_predictions / total_masked_tokens if total_masked_tokens > 0 else 0.0
         train_loss.append(avg_loss)
-        train_acc.append(total_correct_predictions/len(train_dataloader))
+        train_acc.append(train_accuracy)
+        elapsed_time = (datetime.now() - start_time).total_seconds() / 60
         print(f"Epoch {epoch + 1} average loss: {avg_loss:.4f} (Elapsed: {elapsed_time:.2f} min)")
 
         if (epoch + 1) % train_cfg["save_interval"] == 0:
@@ -203,42 +234,41 @@ def train():
             torch.save(model.state_dict(), checkpoint_path)
             print(f"Checkpoint saved to {checkpoint_path}")
 
-        if (epoch + 1) % train_cfg["eval_interval"] == 0:
-            model.eval()
-            val_total_loss = 0
-            val_total_correct_predictions = 0
-            val_total_masked_tokens = 0
+        model.eval()
+        val_total_loss = 0
+        val_total_correct_predictions = 0
+        val_total_masked_tokens = 0
 
-            with torch.no_grad():
-                for x, y, attention_mask, loss_mask in val_dataloader:
-                    x, y, attention_mask, loss_mask = x.to(device), y.to(device), attention_mask.to(device), loss_mask.to(device)
+        with torch.no_grad():
+            for x, y, attention_mask, loss_mask in val_dataloader:
+                x, y, attention_mask, loss_mask = x.to(device), y.to(device), attention_mask.to(device), loss_mask.to(device)
                     
-                    with torch.cuda.amp.autocast(enabled=train_cfg.get("use_amp", False)):
-                        logits = model(x, attention_mask=attention_mask)
+                with torch.cuda.amp.autocast(enabled=train_cfg.get("use_amp", False)):
+                    logits = model(x, attention_mask=attention_mask)
 
-                        logits_flat = logits.view(-1, logits.size(-1))
-                        y_flat = y.view(-1)
-                        loss_mask_flat = loss_mask.view(-1)
+                    logits_flat = logits.view(-1, logits.size(-1))
+                    y_flat = y.view(-1)
+                    loss_mask_flat = loss_mask.view(-1)
 
-                        masked_logits = logits_flat[loss_mask_flat]
-                        masked_y = y_flat[loss_mask_flat]
+                    masked_logits = logits_flat[loss_mask_flat]
+                    masked_y = y_flat[loss_mask_flat]
 
-                        if masked_y.numel() > 0:
-                            val_loss = F.cross_entropy(
+                    if masked_y.numel() > 0:
+                        test_loss = F.cross_entropy(
                                 masked_logits,
                                 masked_y,
                                 ignore_index=pad_token_id
-                            )
-                            val_total_loss += val_loss.item()
+                        )
+                        val_total_loss += test_loss.item()
 
                             # Calculate accuracy
-                            predictions = torch.argmax(masked_logits, dim=-1)
-                            val_total_correct_predictions += (predictions == masked_y).sum().item()
-                            val_total_masked_tokens += masked_y.numel()
+                        predictions = torch.argmax(masked_logits, dim=-1)
+                        val_total_correct_predictions += (predictions == masked_y).sum().item()
+                        val_total_masked_tokens += masked_y.numel()
                 
             avg_val_loss = val_total_loss / len(val_dataloader)
             val_accuracy = val_total_correct_predictions / val_total_masked_tokens if val_total_masked_tokens > 0 else 0.0
-            test_loss.append(avg_val_loss)
+            val_loss.append(avg_val_loss)
             test_acc.append(val_accuracy)
             print(f"Validation Loss after Epoch {epoch + 1}: {avg_val_loss:.4f}, Accuracy: {val_accuracy:.4f}")
             model.train()
@@ -252,7 +282,7 @@ def train():
     # Plot Loss
     plt.figure(figsize=(10, 5))
     plt.plot(train_loss, label="Train Loss")
-    plt.plot(test_loss, label="Testing Loss")
+    plt.plot(val_loss, label="Testing Loss")
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
     plt.title("Loss Over Epochs")
