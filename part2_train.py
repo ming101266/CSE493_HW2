@@ -11,7 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from model import GPT, GPTConfig
-from utils import CharTokenizer, TextDataset, custom_collate_fn
+from utils import CharTokenizer, TextDataset, custom_collate_fn, NumberTokenizer
 
 # -------- Dataset --------
 
@@ -21,7 +21,7 @@ def prepare_dataset_tokens(filepath, tokenizer):
         for line in f:
             line = line.strip()
             if line:
-                tokenized_line = [tokenizer.eot_token] + tokenizer.encode(line) + [tokenizer.eot_token]
+                tokenized_line = [tokenizer.eot_token] + tokenizer.encode(line)
                 list_of_tokenized_expressions.append(tokenized_line)
     return list_of_tokenized_expressions
 
@@ -36,19 +36,8 @@ def train():
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {device}")
-
-    all_text = []
-    data_dir_path = data_cfg.get("data_dir")
-    for split_file in ["train.txt", "val.txt", "test.txt"]:
-        file_path = os.path.join(data_dir_path, split_file)
-        if os.path.exists(file_path):
-            with open(file_path, "r", encoding="utf-8") as f:
-                all_text.extend(f.readlines())
     
-    if not all_text:
-        raise RuntimeError(f"No text found in {data_dir_path}. Cannot initialize tokenizer. Please ensure data is generated and path is correct.")
-
-    tokenizer = CharTokenizer(text_corpus=all_text)
+    tokenizer = NumberTokenizer()
     pad_token_id = tokenizer.pad_token
     print(f"Vocab Size: {tokenizer.vocab_size}")
     print(f"Tokenizer stoi: {tokenizer.stoi}")
@@ -110,7 +99,7 @@ def train():
         for j in range(min(4, x.shape[0])):
             print(f"    Sample {j}:")
             print(f"      X (decoded, no pads): {tokenizer.decode(x[j][attention_mask[j]].tolist())}")
-            print(f"      Y (decoded, no pads): {tokenizer.decode(y[j][attention_mask[j]].tolist())}")
+            print(f"      Y (decoded, no pads): {tokenizer.decode(y[j][loss_mask[j]].tolist())}")
             print(f"      X (raw tokens): {x[j].tolist()}")
             print(f"      Y (raw tokens): {y[j].tolist()}")
             print(f"      Attention Mask: {attention_mask[j].tolist()}")
