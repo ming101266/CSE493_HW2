@@ -38,7 +38,7 @@ def train():
     print(f"Using device: {device}")
 
     all_text = []
-    data_dir_path = data_cfg.get("data_dir", "data_p97")
+    data_dir_path = data_cfg.get("data_dir")
     for split_file in ["train.txt", "val.txt", "test.txt"]:
         file_path = os.path.join(data_dir_path, split_file)
         if os.path.exists(file_path):
@@ -282,26 +282,24 @@ def train():
     # Plot Loss
     plt.figure(figsize=(10, 5))
     plt.plot(train_loss, label="Train Loss")
-    plt.plot(val_loss, label="Testing Loss")
+    plt.plot(val_loss, label="Validation Loss")
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
     plt.title("Loss Over Epochs")
     plt.legend()
     plt.grid(True)
     plt.savefig(os.path.join(train_cfg["save_dir"], "loss_plot.png"))
-    plt.show()
 
     # Plot Accuracy
     plt.figure(figsize=(10, 5))
     plt.plot(train_acc, label="Train Accuracy")
-    plt.plot(test_acc, label="Testing Accuracy")
+    plt.plot(test_acc, label="Validation Accuracy")
     plt.xlabel("Epoch")
     plt.ylabel("Accuracy")
     plt.title("Accuracy Over Epochs")
     plt.legend()
     plt.grid(True)
     plt.savefig(os.path.join(train_cfg["save_dir"], "acc_plot.png"))
-    plt.show()
 
 
 if __name__ == "__main__":

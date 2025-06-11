@@ -11,11 +11,15 @@ from utils import CharTokenizer, TextDataset, custom_collate_fn
 from part2_train import prepare_dataset_tokens
 
 # -------- Evaluation Function --------
-def evaluate():
+def evaluate(config_path="part2config.yaml"):
+    with open(config_path, "r") as f:
+        cfg_dict = yaml.safe_load(f)
+    train_config = cfg_dict["train"]
+
     parser = argparse.ArgumentParser(description="Evaluate a trained GPT model on the test set.")
     parser.add_argument("--config", type=str, default="part2config.yaml",
                         help="Path to the configuration file (config.yaml).")
-    parser.add_argument("--checkpoint", type=str, default="part2_checkpoints/model_final.pt",
+    parser.add_argument("--checkpoint", type=str, default=os.path.join(train_config["save_dir"], "model_final.pt"),
                         help="Path to the trained model checkpoint (.pt file).")
     args = parser.parse_args()
 

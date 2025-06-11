@@ -33,15 +33,8 @@ def generate(model, idx, max_new_tokens, tokenizer, temperature=1.0, top_k=None)
     return tokenizer.decode(tokens)
 
 # -------- Inference --------
-def main(config_path="config.yaml"):
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--checkpoint", type=str, default="checkpoints/model_final_step100000.pt", help="Path to model .pt checkpoint")
-    parser.add_argument("--prompt", type=str, default="", help="Initial prompt string")
-    parser.add_argument("--tokens", type=int, default=10, help="Number of tokens to generate")
-    parser.add_argument("--data_dir", type=str, default="data_p97", help="Directory containing the training data (for tokenizer vocab building)")
-    args = parser.parse_args()
-
-    # Load model config and checkpoint
+def main(config_path="part2config.yaml"):
+        # Load model config and checkpoint
     device = "cuda" if torch.cuda.is_available() else "cpu"
     
     with open(config_path, "r") as f:
@@ -49,6 +42,13 @@ def main(config_path="config.yaml"):
 
     model_cfg = cfg_dict["model"]
     train_cfg = cfg_dict["train"] 
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--checkpoint", type=str, default=train_cfg["save_dir"] + "model_final.pt", help="Path to model .pt checkpoint")
+    parser.add_argument("--prompt", type=str, default="", help="Initial prompt string")
+    parser.add_argument("--tokens", type=int, default=10, help="Number of tokens to generate")
+    parser.add_argument("--data_dir", type=str, default=train_cfg["save_dir"], help="Directory containing the training data (for tokenizer vocab building)")
+    args = parser.parse_args()
+
 
     config = GPTConfig(**model_cfg)
 
@@ -60,11 +60,8 @@ def main(config_path="config.yaml"):
             with open(file_path, "r", encoding="utf-8") as f:
                 all_text.extend(f.readlines())
     
-    if not all_text:
-        print(f"Warning: No text found in {args.data_dir}. Initializing tokenizer with default characters. This might cause issues.")
-        tokenizer = CharTokenizer(config_vocab=config.vocab_size)
-    else:
-        tokenizer = CharTokenizer(text_corpus=all_text)
+    
+    tokenizer = CharTokenizer(text_corpus=all_text)
     
     config.vocab_size = tokenizer.vocab_size
 

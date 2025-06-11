@@ -31,8 +31,8 @@ def generate_samples(p, n_samples, op):
 def split_and_save(samples, outdir):
     random.shuffle(samples)
     n = len(samples)
-    train_end = int(n * 0.8)
-    val_end = int(n * 0.9)
+    train_end = int(n * 0.5)
+    val_end = int(n * 0.75)
     os.makedirs(outdir, exist_ok=True)
 
     splits = {
@@ -58,7 +58,7 @@ def main(config_path="part2config.yaml"):
     samples_per_p = generate_config["num_samples"]
 
     samples = generate_samples(generate_config["prime"], samples_per_p, op = generate_config["op"])
-    outdir = f"data"
+    outdir = generate_config["data_dir"]
     split_and_save(samples, outdir)
 
 if __name__ == "__main__":
