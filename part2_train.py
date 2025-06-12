@@ -112,7 +112,7 @@ def train():
     num_training_steps = train_cfg["epochs"] * len(train_dataloader)
     lr_scheduler = get_cosine_schedule_with_warmup(
         optimizer,
-        num_warmup_steps=train_cfg.get("warmup_steps", 0),
+        num_warmup_steps=train_cfg.get("warmup_steps", 100),
         num_training_steps=num_training_steps
     )
 

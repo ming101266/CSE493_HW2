@@ -40,6 +40,7 @@ def evaluate(config_path="part2config.yaml"):
     print(f"Pad Token ID: {pad_token_id}")
 
     # Prepare test dataset
+    data_dir_path = data_cfg["data_dir"]
     test_expressions = prepare_dataset_tokens(os.path.join(data_dir_path, "test.txt"), tokenizer)
     test_dataset = TextDataset(test_expressions)
     test_dataloader = DataLoader(

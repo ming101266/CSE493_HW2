@@ -1,7 +1,7 @@
 model:
   block_size: 5
   vocab_size: 16
-  n_layer: 1
+  n_layer: 2
   n_head: 4
   n_embd: 128
   dropout: 0.1
@@ -9,10 +9,10 @@ model:
   tokenizer: "char-level"
 
 train:
-  batch_size: 50
+  batch_size: 100
   save_dir: "part2_checkpoints/"
-  lr: 1e-4
-  weight_decay: 0.01
+  lr: 5e-4
+  weight_decay: 0.05
   betas: [0.9, 0.95]
   epochs: 100
   save_interval: 10
@@ -26,5 +26,5 @@ generate:
   seed: 42
   op: '/'
   prime: 97
-  num_samples: 20000
+  num_samples: 10000
   data_dir: "part2_checkpoints/"
