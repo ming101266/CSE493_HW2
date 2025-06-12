@@ -64,6 +64,7 @@ def train():
         tuple(train_cfg["betas"]),
         device_type=device
     )
+    data_dir_path = data_cfg["data_dir"]
 
     train_expressions = prepare_dataset_tokens(os.path.join(data_dir_path, "train.txt"), tokenizer)
     val_expressions = prepare_dataset_tokens(os.path.join(data_dir_path, "val.txt"), tokenizer)
