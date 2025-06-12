@@ -7,7 +7,7 @@ import argparse
 from tqdm import tqdm
 
 from model import GPT, GPTConfig
-from utils import CharTokenizer, TextDataset, custom_collate_fn
+from utils import CharTokenizer, TextDataset, custom_collate_fn, NumberTokenizer
 from part2_train import prepare_dataset_tokens
 
 # -------- Evaluation Function --------
@@ -19,7 +19,7 @@ def evaluate(config_path="part2config.yaml"):
     parser = argparse.ArgumentParser(description="Evaluate a trained GPT model on the test set.")
     parser.add_argument("--config", type=str, default="part2config.yaml",
                         help="Path to the configuration file (config.yaml).")
-    parser.add_argument("--checkpoint", type=str, default=os.path.join(train_config["save_dir"], "model_final.pt"),
+    parser.add_argument("--checkpoint", type=str, default=os.path.join(train_config["save_dir"], "model_epoch100.pt"),
                         help="Path to the trained model checkpoint (.pt file).")
     args = parser.parse_args()
 
@@ -34,19 +34,7 @@ def evaluate(config_path="part2config.yaml"):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {device}")
 
-    # Initialize character tokenizer (by reading all data files to build its vocabulary)
-    all_text = []
-    data_dir_path = data_cfg.get("data_dir", "data_p97")
-    for split_file in ["train.txt", "val.txt", "test.txt"]:
-        file_path = os.path.join(data_dir_path, split_file)
-        if os.path.exists(file_path):
-            with open(file_path, "r", encoding="utf-8") as f:
-                all_text.extend(f.readlines())
-    
-    if not all_text:
-        raise RuntimeError(f"No text found in {data_dir_path}. Cannot initialize tokenizer.")
-
-    tokenizer = CharTokenizer(text_corpus=all_text)
+    tokenizer = NumberTokenizer()
     pad_token_id = tokenizer.pad_token
     print(f"Vocab Size: {tokenizer.vocab_size}")
     print(f"Pad Token ID: {pad_token_id}")
