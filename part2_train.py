@@ -215,7 +215,7 @@ def train():
         train_loss.append(avg_loss)
         train_acc.append(train_accuracy)
         elapsed_time = (datetime.now() - start_time).total_seconds() / 60
-        print(f"Epoch {epoch + 1} average loss: {avg_loss:.4f} (Elapsed: {elapsed_time:.2f} min)")
+        print(f"Epoch {epoch + 1} average loss: {avg_loss:.4f} train acc: {train_accuracy}, (Elapsed: {elapsed_time:.2f} min)")
 
         if (epoch + 1) % train_cfg["save_interval"] == 0:
             os.makedirs(train_cfg["save_dir"], exist_ok=True)
