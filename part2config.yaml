@@ -12,9 +12,9 @@ train:
   batch_size: 100
   save_dir: "part2_checkpoints/"
   lr: 5e-4
-  weight_decay: 0.05
+  weight_decay: 0.5
   betas: [0.9, 0.95]
-  epochs: 100
+  epochs: 200
   save_interval: 10
   eval_interval: 1
   seed: 42
