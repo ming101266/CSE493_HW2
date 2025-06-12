@@ -9,10 +9,6 @@ from utils import CharTokenizer, NumberTokenizer
 @torch.no_grad()
 def generate(model, idx, max_new_tokens, tokenizer, block_size, temperature=1.0, top_k=None):
     model.eval()
-
-@torch.no_grad()
-def generate(model, idx, max_new_tokens, tokenizer, block_size, temperature=1.0, top_k=None):
-    model.eval()
     for _ in range(max_new_tokens):
         # Pad if needed
         if idx.size(1) < block_size:
@@ -22,7 +18,6 @@ def generate(model, idx, max_new_tokens, tokenizer, block_size, temperature=1.0,
             idx_cond = torch.cat([pad_tensor, idx], dim=1)
         else:
             idx_cond = idx[:, -block_size:]
-        print(idx_cond)
 
         # Forward pass
         logits = model(idx_cond)
@@ -35,7 +30,6 @@ def generate(model, idx, max_new_tokens, tokenizer, block_size, temperature=1.0,
         probs = torch.softmax(logits, dim=-1)
         next_token = torch.multinomial(probs, num_samples=1)
         idx = torch.cat((idx, next_token), dim=1)
-        print(next_token.item())
         if next_token.item() == tokenizer.eot_token:
             break
 
@@ -51,7 +45,7 @@ def generate(model, idx, max_new_tokens, tokenizer, block_size, temperature=1.0,
 # -------- Inference --------
 def main(config_path="part2config.yaml"):
     parser = argparse.ArgumentParser()
-    parser.add_argument("--checkpoint", type=str, default="part2_checkpoints/model_final.pt", help="Path to model .pt checkpoint")
+    parser.add_argument("--checkpoint", type=str, default="grokking_checkpoint/model_final.pt", help="Path to model .pt checkpoint")
     parser.add_argument("--prompt", type=str, default="", help="Initial prompt string")
     parser.add_argument("--tokens", type=int, default=1, help="Number of tokens to generate")
     args = parser.parse_args()
@@ -86,7 +80,6 @@ def main(config_path="part2config.yaml"):
 
     # Prepend EOT as BOS
     input_ids = torch.tensor([[tokenizer.eot_token] + encoded_prompt], dtype=torch.long).to(device)
-    print(input_ids)
 
     output_text = generate(model, input_ids, args.tokens, tokenizer, model_cfg["block_size"])
 
