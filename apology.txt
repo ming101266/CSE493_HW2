@@ -1,0 +1,4 @@
+Hi! I am so sorry but our folder is about 500mb when zipped and I can't find a way to submit it to gradescope or find a way for github to deal with it in a timely fashion since we are in dependency hell because each member's version is just so slightly different in non-essential files and some members were not up to date with the model checkpoints uploaded. 
+So here is a google drive link for our project. Our github link contains the correct code but not all the results of our experiments.
+
+https://drive.google.com/drive/folders/10RWGAuJ_rW495f1U5l-liGhRFLdSkIVL?usp=drive_link
